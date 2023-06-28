@@ -1,0 +1,110 @@
+describe('Blog app', function() {
+  beforeEach(function() {
+    cy.visit('')
+    cy.request('POST', `${Cypress.env('BACKEND')}/testing/reset`)
+    const user = {
+      name: 'Matti Luukkainen',
+      username: 'mluukkai',
+      password: 'salainen'
+    }
+    cy.request('POST', `${Cypress.env('BACKEND')}/users`, user)
+  })
+
+  it('Login form is shown', function() {
+    cy.contains('log in').click()
+  })
+
+  describe('Login',function() {
+    it('succeeds with correct credentials', function() {
+      cy.contains('log in').click()
+      cy.get('#username').type('mluukkai')
+      cy.get('#password').type('salainen')
+      cy.get('#login-button').click()
+
+      cy.contains('Matti Luukkainen logged in')
+    })
+
+    it('fails with wrong credentials', function() {
+      cy.contains('log in').click()
+      cy.get('#username').type('mluukkai')
+      cy.get('#password').type('wrong')
+      cy.get('#login-button').click()
+
+      cy.get('.error')
+        .should('contain', 'Wrong username or password')
+        .and('have.css', 'color', 'rgb(255, 0, 0)')
+        .and('have.css', 'border-style', 'solid')
+
+      cy.get('html').should('not.contain', 'Matti Luukkainen logged in')
+    })
+  })
+
+  describe('When logged in', function() {
+    beforeEach(function() {
+      cy.login({ username: 'mluukkai', password: 'salainen' })
+    })
+
+    it(' a new blog can be created', function(){
+      cy.contains('create new blog').click()
+      cy.get('#title').type('a blog created by cypress')
+      cy.get('#author').type('Jamie')
+      cy.get('#url').type('http://test.com')
+      cy.get('#create-button').click()
+
+      cy.contains('a blog created by cypress')
+    })
+
+    describe('several blogs exist', function() {
+      beforeEach(function(){
+        cy.createBlog({ title: 'first blog', author: 'one', url: 'http://test1.com' })
+        cy.createBlog({ title: 'second blog', author: 'two', url: 'http://test2.com' })
+        cy.createBlog({ title: 'third blog', author: 'three', url: 'http://test3.com' })
+      })
+
+      it('one of those can be liked', function(){
+        cy.contains('second blog').parent().find('button').as('theButton')
+        cy.get('@theButton').click()
+        cy.get('#like').click()
+
+        cy.contains('1')
+      })
+
+      it('the blog can be deleted', function(){
+        cy.contains('second blog').parent().find('button').as('theButton')
+        cy.get('@theButton').click()
+        cy.contains('remove').click()
+
+        cy.get('html').should('not.contain', 'second blog')
+      })
+
+      it('the blogs are ordered according to likes', function(){
+        cy.contains('third blog').parent().find('button').as('thirdButton')
+        cy.get('@thirdButton').click()
+        cy.get('#like').click()
+        cy.get('#like').click()
+
+        cy.get('.mainPage').eq(0).should('contain', 'third blog')
+      })
+    })
+  })
+  describe('Another user', function() {
+    beforeEach(function() {
+      cy.visit('')
+      cy.request('POST', `${Cypress.env('BACKEND')}/testing/reset`)
+      const newUser = {
+        name: 'Jamie',
+        username: 'another',
+        password: 'password'
+      }
+      cy.request('POST', `${Cypress.env('BACKEND')}/users`, newUser)
+    })
+
+
+    it('only the creator can see the remove button', function(){
+      cy.login({ username: 'another', password: 'password' })
+      cy.contains('first blog').parent().find('button').as('firstButton')
+      cy.get('@firstButton').click()
+      cy.contains('remove').should('not.be.visible')
+    })
+  })
+})
