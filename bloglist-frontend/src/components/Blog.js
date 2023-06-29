@@ -29,8 +29,8 @@ const Blog = ({ blog, setDelete }) => {
   }
 
   return (
-    <div style={blogStyle}>
-      <div className='mainPage'>
+    <div style={blogStyle} className='blog'>
+      <div className='main-page'>
         {blog.title} {blog.author}
         <button id='view' onClick={toggleDetails}>{detailsVisible? 'hide' : 'view'}</button>
       </div>

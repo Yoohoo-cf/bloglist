@@ -1,13 +1,17 @@
 describe('Blog app', function() {
   beforeEach(function() {
-    cy.visit('')
     cy.request('POST', `${Cypress.env('BACKEND')}/testing/reset`)
-    const user = {
+    cy.request('POST', `${Cypress.env('BACKEND')}/users`, {
       name: 'Matti Luukkainen',
       username: 'mluukkai',
       password: 'salainen'
-    }
-    cy.request('POST', `${Cypress.env('BACKEND')}/users`, user)
+    })
+    cy.request('POST', `${Cypress.env('BACKEND')}/users`, {
+      name: 'Janie',
+      username: 'another',
+      password: 'password'
+    })
+    cy.visit('')
   })
 
   it('Login form is shown', function() {
@@ -77,34 +81,35 @@ describe('Blog app', function() {
         cy.get('html').should('not.contain', 'second blog')
       })
 
+      it('a non creator can not delete the blog', function(){
+        cy.contains('logout').click()
+        cy.login({ username: 'another', password: 'password' })
+        cy.contains('first blog').parent().find('button').as('firstButton')
+        cy.get('@firstButton').click()
+        cy.contains('remove').click()
+
+        cy.contains('first blog')
+      })
+    })
+
+    describe('blogs order', function(){
+
+      beforeEach(function(){
+        cy.login({ username: 'mluukkai', password: 'salainen' })
+        cy.createBlog({ title: 'first blog', author: 'one', url: 'http://test1.com' })
+        cy.createBlog({ title: 'second blog', author: 'two', url: 'http://test2.com' })
+        cy.createBlog({ title: 'third blog', author: 'three', url: 'http://test3.com' })
+      })
+
+
       it('the blogs are ordered according to likes', function(){
         cy.contains('third blog').parent().find('button').as('thirdButton')
         cy.get('@thirdButton').click()
         cy.get('#like').click()
         cy.get('#like').click()
 
-        cy.get('.mainPage').eq(0).should('contain', 'third blog')
+        cy.get('.blog').eq(0).should('contain', 'third blog')
       })
-    })
-  })
-  describe('Another user', function() {
-    beforeEach(function() {
-      cy.visit('')
-      cy.request('POST', `${Cypress.env('BACKEND')}/testing/reset`)
-      const newUser = {
-        name: 'Jamie',
-        username: 'another',
-        password: 'password'
-      }
-      cy.request('POST', `${Cypress.env('BACKEND')}/users`, newUser)
-    })
-
-
-    it('only the creator can see the remove button', function(){
-      cy.login({ username: 'another', password: 'password' })
-      cy.contains('first blog').parent().find('button').as('firstButton')
-      cy.get('@firstButton').click()
-      cy.contains('remove').should('not.be.visible')
     })
   })
 })
