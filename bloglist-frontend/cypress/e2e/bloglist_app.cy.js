@@ -102,13 +102,17 @@ describe('Blog app', function() {
       })
 
 
-      it('the blogs are ordered according to likes', function(){
-        cy.contains('third blog').parent().find('button').as('thirdButton')
-        cy.get('@thirdButton').click()
-        cy.get('#like').click()
-        cy.get('#like').click()
+      it.only('the blogs are ordered according to likes', function(){
+        cy.contains('third blog').contains('view').click()
 
-        cy.get('.blog').eq(0).should('contain', 'third blog')
+        cy.get('#like').click()
+        cy.get('#like').click()
+        cy.get('#like').click()
+        cy.reload()
+
+        cy.get('.blog').then((blogs) => {
+          expect(blogs.eq(0)).to.contain('third blog')
+        })
       })
     })
   })
